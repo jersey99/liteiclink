@@ -333,6 +333,7 @@ class GTY(LiteXModule):
         assert data_width in [20, 40, 80]
 
         # TX controls
+        self.tx_enable_logic        = Signal(reset=1)
         self.tx_enable              = Signal(reset=1)
         self.tx_ready               = Signal()
         self.tx_inhibit             = Signal()
@@ -1254,7 +1255,7 @@ class GTY(LiteXModule):
         if hasattr(self, "clock_aligner"):
             self.comb += self.clock_aligner.disable.eq(self._clock_aligner_disable.fields.disable)
         self.comb += [
-            self.tx_enable.eq(self._tx_enable.fields.enable),
+            self.tx_enable.eq(self._tx_enable.fields.enable & self.tx_enable_logic),
             self._tx_ready.fields.ready.eq(self.tx_ready),
             self.tx_inhibit.eq(self._tx_inhibit.fields.inhibit),
             self.tx_produce_square_wave.eq(self._tx_produce_square_wave.fields.enable),
