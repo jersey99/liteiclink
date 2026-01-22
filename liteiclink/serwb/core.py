@@ -9,17 +9,17 @@ from migen.genlib.cdc import MultiReg
 
 from litex.gen import *
 
-from litex.soc.interconnect import stream
+from litex.soc.interconnect        import stream
 from litex.soc.interconnect.packet import Arbiter, Dispatcher
 
-from liteiclink.serwb.packet import packet_description
-from liteiclink.serwb.packet import Packetizer, Depacketizer
+from liteiclink.serwb.packet    import packet_description
+from liteiclink.serwb.packet    import Packetizer, Depacketizer
 from liteiclink.serwb.etherbone import Etherbone
 
 # SERWB Core ---------------------------------------------------------------------------------------
 
 class SERWBCore(LiteXModule):
-    def __init__(self, phy, clk_freq, mode, port=0,
+    def __init__(self, phy, clk_freq, mode, with_rst_on_link_down=True, port=0,
         etherbone_buffer_depth = 4,
         tx_buffer_depth        = 8,
         rx_buffer_depth        = 8,
@@ -31,7 +31,7 @@ class SERWBCore(LiteXModule):
 
         # Etherbone.
         # ----------
-        self.etherbone = etherbone = Etherbone(mode, etherbone_buffer_depth)
+        self.etherbone = etherbone = ResetInserter()(Etherbone(mode, etherbone_buffer_depth))
         self.add_downstream_endpoint(port=port, endpoint=etherbone.source)
         self.add_upstream_endpoint(  port=port, endpoint=etherbone.sink)
 
@@ -41,25 +41,36 @@ class SERWBCore(LiteXModule):
 
         # Packetizer / Depacketizer.
         # --------------------------
-        self.packetizer   = packetizer   = Packetizer()
-        self.depacketizer = depacketizer = Depacketizer(clk_freq)
+        self.packetizer   = packetizer   = ResetInserter()(Packetizer())
+        self.depacketizer = depacketizer = ResetInserter()(Depacketizer(clk_freq))
 
         # Buffering.
         # ----------
-        tx_fifo = stream.SyncFIFO([("data", 32)], tx_buffer_depth, buffered=True)
-        rx_fifo = stream.SyncFIFO([("data", 32)], rx_buffer_depth, buffered=True)
-        self.submodules += tx_fifo, rx_fifo
+        self.tx_fifo = tx_fifo = ResetInserter()(stream.SyncFIFO([("data", 32)], tx_buffer_depth, buffered=True))
+        self.rx_fifo = rx_fifo = ResetInserter()(stream.SyncFIFO([("data", 32)], rx_buffer_depth, buffered=True))
 
         # Data-Path.
         # ----------
         self.comb += [
-            # Phy <--> Core
+            # Core -> PHY.
             packetizer.source.connect(tx_fifo.sink),
             tx_fifo.source.connect(phy.sink),
 
+            # PHY -> Core.
             phy.source.connect(rx_fifo.sink),
             rx_fifo.source.connect(depacketizer.sink),
         ]
+
+        # Reset internal module when link down.
+        # -------------------------------------
+        if with_rst_on_link_down:
+            self.comb += [
+                etherbone.reset.eq(    ~phy.init.ready),
+                packetizer.reset.eq(   ~phy.init.ready),
+                depacketizer.reset.eq( ~phy.init.ready),
+                tx_fifo.reset.eq(      ~phy.init.ready),
+                rx_fifo.reset.eq(      ~phy.init.ready),
+            ]
 
     def add_downstream_endpoint(self, port, endpoint):
         if port in self.downstream_endpoints.keys():

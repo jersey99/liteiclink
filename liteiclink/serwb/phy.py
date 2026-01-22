@@ -1,7 +1,7 @@
 #
 # This file is part of LiteICLink.
 #
-# Copyright (c) 2017-2023 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2017-2024 Florent Kermarrec <florent@enjoy-digital.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
@@ -19,12 +19,12 @@ from liteiclink.serwb.efinixserdes import EfinixSerdes
 
 # SerDes Initialization/Synchronisation ------------------------------------------------------------
 #
-# - Master sends IDLE patterns (zeroes) to Slave to reset it.
-# - Master sends K28.5 commas to allow Slave to calibrate, Slave sends IDLE patterns.
-# - Slave sends K28.5 commas to allow Master to calibrate, Master sends K28.5 commas.
-# - Master stops sending K28.5 commas.
-# - Slave stops sending K28.5 commas.
-# - Physical link is ready.
+# - 1) Master sends IDLE patterns (zeroes) to Slave to reset it.
+# - 2) Master sends K28.5 commas to allow Slave to calibrate, Slave sends IDLE patterns.
+# - 3) Slave sends K28.5 commas to allow Master to calibrate, Master sends K28.5 commas.
+# - 4) Master stops sending K28.5 commas.
+# - 5) Slave stops sending K28.5 commas.
+# - 6) Physical link is ready.
 # --------------------------------------------------------------------------------------------------
 
 # Serdes Master Init -------------------------------------------------------------------------------
@@ -404,14 +404,21 @@ class SERWBPHY(LiteXModule):
 
         # SerDes.
         # -------
-        if device[:4] == "xcku":
+
+        # Xilinx Ultrascale(+).
+        if device[:4] in ["xcku", "xvu", "xczu"]:
             assert clk_ratio == "1:1"
             taps = 512
             self.serdes = KUSerdes(pads, mode)
-        elif device[:4] in ["xc7a", "xc7z"]:
+
+        # Xilinx 7-Series.
+        elif device[:4] in ["xc7a", "xc7k", "xc7v", "xc7z"]:
             assert clk_ratio == "1:1"
             taps = 32
             self.serdes = S7Serdes(pads, mode)
+
+
+        # Efinix Titanium.
         elif device[:2] == "Ti":
             taps = 64
             self.serdes = EfinixSerdes(pads, mode,
@@ -419,6 +426,8 @@ class SERWBPHY(LiteXModule):
                 clk4x     = clk4x,
                 clk_ratio = clk_ratio,
             )
+
+        # Efinix Trion.
         elif device[:2] in ["T1", "T2"]:
             taps = 4 # No dynamic delay
             self.serdes = EfinixSerdes(pads, mode,
