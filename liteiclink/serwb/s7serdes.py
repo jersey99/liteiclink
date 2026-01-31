@@ -59,11 +59,11 @@ class _S7SerdesClocking(LiteXModule):
                 DifferentialOutput(self.refclk, pads.clk_p, pads.clk_n)
             ]
 
-        # Slave Mode.
-        # -----------
-        # Multiply the clock provided by Master with a PLL/MMCM.
-        if mode == "slave":
-            self.specials += DifferentialInput(pads.clk_p, pads.clk_n, self.refclk)
+        # # Slave Mode.
+        # # -----------
+        # # Multiply the clock provided by Master with a PLL/MMCM.
+        # if mode == "slave":
+        #     self.specials += DifferentialInput(pads.clk_p, pads.clk_n, self.refclk)
 
 # S7 SerDes TX -------------------------------------------------------------------------------------
 

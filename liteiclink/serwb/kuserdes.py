@@ -32,7 +32,7 @@ class _KUSerdesClocking(LiteXModule):
             self.comb += [
                 converter.sink.valid.eq(1),
                 converter.source.ready.eq(1),
-                converter.sink.data.eq(Replicate(Signal(10, reset=0b1111100000), 4)),
+                converter.sink.data.eq(Replicate(Signal(8, reset=0b11110000), 5)),
             ]
             self.specials += [
                 Instance("OSERDESE3",
