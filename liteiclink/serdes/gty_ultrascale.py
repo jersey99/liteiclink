@@ -99,7 +99,7 @@ class GTYQuadPLL(LiteXModule):
         self.config = config = self.compute_config(refclk_freq, linerate)
 
         # DRP.
-        self.drp = DRPInterface()
+        self.drp = DRPInterface(address_width=10)
 
         # # #
 
@@ -352,7 +352,7 @@ class GTY(LiteXModule):
         self.rx_prbs_errors = Signal(32)
 
         # DRP
-        self.drp = DRPInterface()
+        self.drp = DRPInterface(address_width=10)
 
         # Loopback
         self.loopback = Signal(3)
